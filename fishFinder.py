@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from tensorflow import keras
 import imageio
 from functools import partial
-
+from config import *
 
 def main():
     
@@ -61,13 +61,13 @@ def main():
     layerList = [baseModel,
                  globalAvgPooling,
                  # tf.keras.layers.Dropout(0.5),
-                 tf.keras.layers.Dense(128, activation='relu'),
-                 tf.keras.layers.Dropout(0.5),
+                 # tf.keras.layers.Dense(128, activation='relu'),
+                 # tf.keras.layers.Dropout(0.5),
                  # tf.keras.layers.Dense(64, activation='relu'),
                  #Since this is multi-class classification, last layer should have softmax activation
                  #in case of binary classification, we can ignore this or set sigmoid
                  tf.keras.layers.Dense(dataset.NUM_CLASSES,
-                                       kernel_regularizer=keras.regularizers.l2(30.0),
+                                       kernel_regularizer=keras.regularizers.l2(2.0),
                                        activation=keras.activations.softmax)
                  ]
 
@@ -83,24 +83,22 @@ def main():
 
     print(model.summary())
 
-
     def scheduler(epoch):
-        if epoch < 3:
+        if epoch < 5:
             return 0.01
-        else:
-            return 0.005
-        # elif epoch >= 3 and epoch < 10:
-        #     return 0.001
-        # elif epoch >= 10:
-        #     return 0.0001
+        elif epoch >= 5 and epoch < 10:
+            return 0.001
+        elif epoch >= 10:
+            return 0.0001
 
+    # cosine learning rate
     # def scheduler(epoch):
-    #     init_lr = 0.001
-    #     lr = 0.5 * (1 + tf.cos(epoch * 3.1415 / 50)) * init_lr
+    #     init_lr = 0.01
+    #     lr = 0.5 * (1 + tf.cos(epoch * 3.1415 / EPOCH)) * init_lr
     #     return float(lr)
 
     # Training
-    checkpointPath = os.path.join('D:/Fish/checkpoints', 'ckp_{epoch}')
+    checkpointPath = os.path.join('checkpoints', 'ckp_{epoch}')
     callbacks = [keras.callbacks.LearningRateScheduler(scheduler),
                  keras.callbacks.TensorBoard(),
                  keras.callbacks.ModelCheckpoint(checkpointPath, save_weights_only=True)]
@@ -120,7 +118,7 @@ def main():
 
     model.fit(trainDs,
               validation_data=testDs,
-              epochs=40,
+              epochs=EPOCH,
               callbacks=callbacks)
 
     # To save the entire model

@@ -7,15 +7,9 @@ Created on Fri Aug 16 09:49:21 2019
 import tensorflow as tf
 import os
 from os import walk
-
-##-----------------------------
-ROOT = "D:\Fish\DATA"
-CLASSES = ['carp', 'largemouth_bass', 'pike', 'crappie']
-NUM_CLASSES = len(CLASSES)
-IMAGE_SIZE = 160 #MobileNetV2
-CROP_LENGTH = 30
-##-----------------------------
-
+from augment import *
+from config import *
+import numpy as np
 
 class InputData:
     
@@ -26,8 +20,8 @@ class InputData:
         Returns:
             None
         """
-        self.trainTestSplit = 0.2
-        self.batchSize = 32
+        self.trainTestSplit = TRAIN_TEST_SPLIT
+        self.batchSize = BATCH_SIZE
         self._createTrainTestDataset()
         
         
@@ -35,14 +29,13 @@ class InputData:
 
         fileNames = []
         labels = []
-        
-        
+
         for idx , label in enumerate(CLASSES):
             for (dirpath, dirnames, names) in walk(os.path.join(ROOT, label)):
                 for file in names:                
                     fileNames.append(os.path.join(dirpath, file))
                     labels.append(idx) #One hot it later
-            
+
         return fileNames, labels
         
 
@@ -83,7 +76,8 @@ class InputData:
             fileTrain.extend(self.fileNames[offset + int(self.trainTestSplit * numSamples) : offset + numSamples])
             labelTrain.extend(self.labels[offset + int(self.trainTestSplit * numSamples) : offset + numSamples])
             
-            
+        self._total_train_size = len(fileTrain)
+        self._total_test_size = len(fileTest)
         return fileTrain, labelTrain, fileTest, labelTest
 
     def _parse_fn_train(self, fileName, label):
@@ -148,6 +142,12 @@ class InputData:
         assert (idx >=0 and idx < len(CLASSES)), "The index is not in the range of 0-{}".format(len(CLASSES))
         return CLASSES[idx]
 
+    def getTrainSize(self):
+        return self._total_train_size
+
+    def getTestSize(self):
+        return self._total_test_size
+
     def preprocessSingleImage(self, fileName, is_training=False):
         """
         In case of testing on a single image
@@ -157,41 +157,25 @@ class InputData:
         fileName = tf.squeeze(fileName)
         imageStr = tf.io.read_file(fileName)
         image = tf.image.decode_jpeg(imageStr)
+        # augment the images
+        aug = augment()
+        image = aug(image, is_training)
+        return image
 
-        if is_training:
-            # Augmentations
-            # image_shape = image.shape
-            # if image_shape[0] == None or image_shape[1]==None:
-            #     print('*' * 20)
-            #     tf.print("fileName", [fileName])
-            #     print(image_shape)
-            #     print('*' * 20)
-            #     raise Exception('Alioooooooooooooooooooooooo')
-            # crop_size = [tf.subtract(image_shape[0], CROP_LENGTH), tf.subtract(image_shape[1], CROP_LENGTH), 3]
-            # image = tf.image.random_crop(image, size=crop_size)
-
-            image = tf.image.resize(image, [IMAGE_SIZE, IMAGE_SIZE])
-            image = tf.image.random_crop(image, [IMAGE_SIZE - CROP_LENGTH, IMAGE_SIZE - CROP_LENGTH, 3])
-            image = tf.image.resize(image, [IMAGE_SIZE, IMAGE_SIZE])
-            image /= 255.0  # [0-1]
-            image = tf.image.random_flip_left_right(image)
-            return image
-
-        else:
-            image = tf.image.resize(image, [IMAGE_SIZE, IMAGE_SIZE])
-            image /= 255.0  # [0-1]
-            return image
-
-
-if __name__ == "__main__":
-
+def get_mean_channels():
     inData = InputData()
     trainDs, testDs = inData.getDatasets()
+    mean = np.zeros((3, 1))
+    std = np.zeros((3, 1))
+    # First, get the mean of each channel in each batch
+    # then, multiply it by the number of samples in that batch
+    # then at the end divide it by the total number of samples in the training data
+    for image, label in trainDs:
+        # print('image.shape {}, label.shape {}'.format(image.shape, label.shape))
+        for c in range(3):
+            mean[c] += tf.math.reduce_mean(image[:, :, :, c]) * image.shape[0]
+            std[c] += tf.math.reduce_std(image[:, :, :, c]) * image.shape[0]
+    return mean / inData.getTrainSize(), std / inData.getTrainSize()
 
-    # dataset has not make_one_shot_iterator anymore in tf 2.0!!!
-    itr = tf.compat.v1.data.make_one_shot_iterator(trainDs)
-    image, label = itr.get_next()
-
-    for itr in range(0, 2):
-        print('image.shape {}, label.shape {}'.format(image.shape, label.shape))
-        print(label)
+if __name__ == "__main__":
+    print(get_mean_channels())
