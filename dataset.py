@@ -173,12 +173,13 @@ class InputData:
             zoom_range=0.2,
             horizontal_flip=True,
             fill_mode='nearest',
-            validation_split=0.2
+            validation_split=0.1
         )
         test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(
             rescale=1 / 255,
         )
 
+        # train
         train_generator = train_datagen.flow_from_directory(
             TRAIN_ROOT,
             target_size=(IMAGE_SIZE, IMAGE_SIZE),
@@ -186,7 +187,18 @@ class InputData:
             class_mode='categorical',
             subset='training',
         )
-        validation_generator = test_datagen.flow_from_directory(
+
+        # validation
+        validation_generator = train_datagen.flow_from_directory(
+            TRAIN_ROOT,
+            target_size=(IMAGE_SIZE, IMAGE_SIZE),
+            batch_size=BATCH_SIZE,
+            class_mode='categorical',
+            subset='validation'
+        )
+
+        # test
+        test_generator = test_datagen.flow_from_directory(
             TEST_ROOT,
             target_size=(IMAGE_SIZE, IMAGE_SIZE),
             batch_size=BATCH_SIZE,
@@ -194,7 +206,7 @@ class InputData:
             subset='validation'
         )
 
-        return train_generator, validation_generator
+        return train_generator, validation_generator, test_generator
 
 def get_mean_channels():
     """

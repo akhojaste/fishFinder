@@ -127,13 +127,13 @@ def main():
     #           callbacks=callbacks)
 
     # Using keras generator
-    train_generator, val_generator = input_data.get_keras_ds()
+    train_generator, val_generator, test_generator = input_data.get_keras_ds()
     model.fit_generator(
         train_generator,
-        steps_per_epoch=49,
+        steps_per_epoch=len(train_generator.filenames) // BATCH_SIZE,
         epochs=EPOCH,
         validation_data=val_generator,
-        validation_steps=12,
+        validation_steps=len(train_generator.filenames) // BATCH_SIZE,
         # class_weight=class_weights,
         callbacks=callbacks
     )
