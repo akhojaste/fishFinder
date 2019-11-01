@@ -1,11 +1,16 @@
-ROOT = "DATA"
+TRAIN_ROOT = "./DATA/train"
+TEST_ROOT = "./DATA/test"
 CLASSES = ['carp', 'largemouth_bass', 'pike', 'crappie']
 NUM_CLASSES = len(CLASSES)
+
 IMAGE_SIZE = 160 #MobileNetV2
 CROP_LENGTH = 60
 
+LAYERS_TO_TRAIN = 0
+L2_REG = 1
+
 BATCH_SIZE = 32
-EPOCH = 40
+EPOCH = 200
 TRAIN_TEST_SPLIT = 0.2
 
 MEAN = [128.99174473, 128.60456352, 118.13461311]

@@ -3,4 +3,4 @@
 rm -rf checkpoints/*
 rm -rf logs/*
 
-python fishFinder.py
+docker run --runtime=nvidia -it --rm -v $PWD:/tmp -w /tmp my-docker python ./fishFinder.py

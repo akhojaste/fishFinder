@@ -31,7 +31,7 @@ class InputData:
         labels = []
 
         for idx , label in enumerate(CLASSES):
-            for (dirpath, dirnames, names) in walk(os.path.join(ROOT, label)):
+            for (dirpath, dirnames, names) in walk(os.path.join(TRAIN_ROOT, label)):
                 for file in names:                
                     fileNames.append(os.path.join(dirpath, file))
                     labels.append(idx) #One hot it later
@@ -41,7 +41,7 @@ class InputData:
 
     def _createTrainTestDataset(self):
         
-        self.fileNames, self.labels = self._getFileNames(ROOT)
+        self.fileNames, self.labels = self._getFileNames(TRAIN_ROOT)
 
         ## Split the data
         fileTrain, labelTrain, fileTest, labelTest = self._splitTrainTest()
@@ -162,7 +162,45 @@ class InputData:
         image = aug(image, is_training)
         return image
 
+
+    def get_keras_ds(self):
+        train_datagen = tf.keras.preprocessing.image.ImageDataGenerator(
+            rotation_range=40,
+            width_shift_range=0.2,
+            height_shift_range=0.2,
+            rescale=1 / 255,
+            shear_range=0.2,
+            zoom_range=0.2,
+            horizontal_flip=True,
+            fill_mode='nearest',
+            validation_split=0.2
+        )
+        test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(
+            rescale=1 / 255,
+        )
+
+        train_generator = train_datagen.flow_from_directory(
+            TRAIN_ROOT,
+            target_size=(IMAGE_SIZE, IMAGE_SIZE),
+            batch_size=BATCH_SIZE,
+            class_mode='categorical',
+            subset='training',
+        )
+        validation_generator = test_datagen.flow_from_directory(
+            TEST_ROOT,
+            target_size=(IMAGE_SIZE, IMAGE_SIZE),
+            batch_size=BATCH_SIZE,
+            class_mode='categorical',
+            subset='validation'
+        )
+
+        return train_generator, validation_generator
+
 def get_mean_channels():
+    """
+    Extracting the mean of each channel from the dataset
+    :return:
+    """
     inData = InputData()
     trainDs, testDs = inData.getDatasets()
     mean = np.zeros((3, 1))
@@ -178,4 +216,8 @@ def get_mean_channels():
     return mean / inData.getTrainSize(), std / inData.getTrainSize()
 
 if __name__ == "__main__":
-    print(get_mean_channels())
+    # print(get_mean_channels())
+
+    input_data = InputData()
+
+    train_gen, val_gen = input_data.get_keras_ds()

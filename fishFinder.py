@@ -9,69 +9,71 @@ import os
 import tensorflow as tf
 import numpy as np
 import dataset
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from tensorflow import keras
-import imageio
+# import imageio
 from functools import partial
 from config import *
+import PIL
+from PIL import Image
+
+
+def get_base(input_shape):
+    base_model = tf.keras.applications.MobileNetV2(input_shape=input_shape,
+                                                   include_top=False,
+                                                   weights='imagenet')
+    return base_model
+
 
 def main():
     
-    ## Input
-    inputData = dataset.InputData()
-    # iterator, trainInitOp, testInitOp = inputData.getIterator()
-    # image, label = iterator.get_next()
+    # Input
+    input_data = dataset.InputData()
+    # train_ds, test_ds = input_data.getDatasets()
+    # for image, label in train_ds.take(1):
+    #     print('image shape {}, label shape {}'.format(image.shape, label.shape))
 
-    trainDs, testDs = inputData.getDatasets()
+    # Model
+    base_model = get_base(input_data.getImageShape())
+    # print(base_model.summary())
 
-    inputShape = inputData.getImageShape()
-    baseModel = tf.keras.applications.MobileNetV2(input_shape=inputShape,
-                                                  include_top=False,
-                                                  weights='imagenet')
+    # feature_map = base_model(image)
+    # print('base model feature shape: {}'.format(feature_map.shape))
 
-    print(baseModel.summary())
-
-    for image, label in trainDs.take(1):
-        print('image shape {}, label shape {}'.format(image.shape, label.shape))
-
-    featureMap = baseModel(image)
-    print('base model feature shape: {}'.format(featureMap.shape))
-
-    #Freeze the base, one way is to set the trainable
+    # Freeze the base, one way is to set the trainable
     # variable on the whole model
-    # baseModel.trainable = False
-    print('number of base model layers {}'.format(len(baseModel.layers)))
-    baseModel.trainable = True
-    fineTuneAt = len(baseModel.layers) - 3
-    for layer in baseModel.layers[:fineTuneAt]:
+    # base_model.trainable = False
+    print('number of base model layers {}'.format(len(base_model.layers)))
+    base_model.trainable = True
+    fine_tune_at = len(base_model.layers) - LAYERS_TO_TRAIN
+    for layer in base_model.layers[:fine_tune_at]:
         layer.trainable = False
 
-    # for i, layer in enumerate(baseModel.layers):
+    # for i, layer in enumerate(base_model.layers):
     #
-    #     if i < (len(baseModel.layers) - 3):
+    #     if i < (len(base_model.layers) - 3):
     #         layer.trainable = False
     #     else:
     #         # training one last conv layer
     #         layer.trainable = True
 
-    globalAvgPooling = tf.keras.layers.GlobalAveragePooling2D()
-    avgPooled = globalAvgPooling(featureMap)
-    print('avgPooled shape : {}'.format(avgPooled.shape))
+    global_avg_pooling = tf.keras.layers.GlobalAveragePooling2D()
+    # avg_pooled = global_avg_pooling(feature_map)
+    # print('avg_pooled shape : {}'.format(avg_pooled.shape))
 
-    layerList = [baseModel,
-                 globalAvgPooling,
-                 # tf.keras.layers.Dropout(0.5),
-                 # tf.keras.layers.Dense(128, activation='relu'),
-                 # tf.keras.layers.Dropout(0.5),
-                 # tf.keras.layers.Dense(64, activation='relu'),
-                 #Since this is multi-class classification, last layer should have softmax activation
-                 #in case of binary classification, we can ignore this or set sigmoid
-                 tf.keras.layers.Dense(dataset.NUM_CLASSES,
-                                       kernel_regularizer=keras.regularizers.l2(2.0),
-                                       activation=keras.activations.softmax)
-                 ]
+    layer_list = [base_model,
+                  global_avg_pooling,
+                  tf.keras.layers.Dense(128, activation='relu'),
+                  tf.keras.layers.Dropout(0.5),
+                  # tf.keras.layers.Dense(64, activation='relu'),
+                  # Since this is multi-class classification, last layer should have softmax activation
+                  # in case of binary classification, we can ignore this or set sigmoid
+                  tf.keras.layers.Dense(dataset.NUM_CLASSES,
+                                        kernel_regularizer=keras.regularizers.l2(L2_REG),
+                                        activation=keras.activations.softmax)
+                  ]
 
-    model = tf.keras.Sequential(layerList)
+    model = tf.keras.Sequential(layer_list)
 
     # To apply label smoothing, need to make the partial function
     loss_label_smoothed = partial(keras.losses.categorical_crossentropy, label_smoothing=0.2)
@@ -81,7 +83,7 @@ def main():
                   # loss=loss_label_smoothed,
                   metrics=['accuracy'])
 
-    print(model.summary())
+    # print(model.summary())
 
     def scheduler(epoch):
         if epoch < 5:
@@ -98,34 +100,49 @@ def main():
     #     return float(lr)
 
     # Training
-    checkpointPath = os.path.join('checkpoints', 'ckp_{epoch}')
-    callbacks = [keras.callbacks.LearningRateScheduler(scheduler),
+    checkpoint_path = os.path.join('checkpoints', 'ckp_{epoch}')
+    callbacks = [# keras.callbacks.LearningRateScheduler(scheduler),
                  keras.callbacks.TensorBoard(),
-                 keras.callbacks.ModelCheckpoint(checkpointPath, save_weights_only=True)]
+                 keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True),
+                 # keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True),
+                 keras.callbacks.ReduceLROnPlateau(patience=3)
+                ]
 
     # Restore from saved epoch
     # init_epoch = 16
     # model.load_weights('D:/Fish/checkpoints/ckp_{}'.format(init_epoch))
     # Check and see if the model is loaded correctly
-    # loss, acc = model.evaluate(testDs)
+    # loss, acc = model.evaluate(test_ds)
     # print('loss {} and acc {}'.format(loss, acc))
 
-    # model.fit(trainDs,
-    #           validation_data=testDs,
+    # model.fit(train_ds,
+    #           validation_data=test_ds,
     #           epochs=50,
     #           callbacks=callbacks,
     #           initial_epoch=init_epoch)
 
-    model.fit(trainDs,
-              validation_data=testDs,
-              epochs=EPOCH,
-              callbacks=callbacks)
+    # model.fit(train_ds,
+    #           validation_data=test_ds,
+    #           epochs=EPOCH,
+    #           callbacks=callbacks)
+
+    # Using keras generator
+    train_generator, val_generator = input_data.get_keras_ds()
+    model.fit_generator(
+        train_generator,
+        steps_per_epoch=49,
+        epochs=EPOCH,
+        validation_data=val_generator,
+        validation_steps=12,
+        # class_weight=class_weights,
+        callbacks=callbacks
+    )
 
     # To save the entire model
     # model.save('D:/Fish/checkpoints/model.h5')
     # Evaluation, sine both test and validations are the same
     # we skip this area
-    # loss, acc = model.evaluate(testDs)
+    # loss, acc = model.evaluate(test_ds)
     # print('loss {}, acc {}'.format(loss, acc))
 
 
