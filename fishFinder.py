@@ -19,22 +19,25 @@ from PIL import Image
 
 
 def get_base(input_shape):
+    """
+    Returns the base model which is pre-trained on imagenet
+    :param input_shape: shape of input to the network
+    :return: pre-trained model
+    """
     base_model = tf.keras.applications.MobileNetV2(input_shape=input_shape,
                                                    include_top=False,
                                                    weights='imagenet')
     return base_model
 
 
-def main():
-    
-    # Input
-    input_data = dataset.InputData()
-    # train_ds, test_ds = input_data.getDatasets()
-    # for image, label in train_ds.take(1):
-    #     print('image shape {}, label shape {}'.format(image.shape, label.shape))
-
-    # Model
-    base_model = get_base(input_data.getImageShape())
+def get_model(input_shape):
+    """
+    constructs the model and returns it
+    :param: input_shape: shape of the input to the network
+    :return: model
+    """
+    # Base model
+    base_model = get_base(input_shape)
     # print(base_model.summary())
 
     # feature_map = base_model(image)
@@ -49,14 +52,6 @@ def main():
     for layer in base_model.layers[:fine_tune_at]:
         layer.trainable = False
 
-    # for i, layer in enumerate(base_model.layers):
-    #
-    #     if i < (len(base_model.layers) - 3):
-    #         layer.trainable = False
-    #     else:
-    #         # training one last conv layer
-    #         layer.trainable = True
-
     global_avg_pooling = tf.keras.layers.GlobalAveragePooling2D()
     # avg_pooled = global_avg_pooling(feature_map)
     # print('avg_pooled shape : {}'.format(avg_pooled.shape))
@@ -64,7 +59,7 @@ def main():
     layer_list = [base_model,
                   global_avg_pooling,
                   tf.keras.layers.Dense(128, activation='relu'),
-                  tf.keras.layers.Dropout(0.5),
+                  tf.keras.layers.Dropout(0.1),
                   # tf.keras.layers.Dense(64, activation='relu'),
                   # Since this is multi-class classification, last layer should have softmax activation
                   # in case of binary classification, we can ignore this or set sigmoid
@@ -83,6 +78,19 @@ def main():
                   # loss=loss_label_smoothed,
                   metrics=['accuracy'])
 
+    return model
+
+
+def main():
+    
+    # Input
+    input_data = dataset.InputData()
+    # train_ds, test_ds = input_data.getDatasets()
+    # for image, label in train_ds.take(1):
+    #     print('image shape {}, label shape {}'.format(image.shape, label.shape))
+
+    # Model
+    model = get_model(input_data.getImageShape())
     # print(model.summary())
 
     def scheduler(epoch):
@@ -101,7 +109,7 @@ def main():
 
     # Training
     checkpoint_path = os.path.join('checkpoints', 'ckp_{epoch}')
-    callbacks = [# keras.callbacks.LearningRateScheduler(scheduler),
+    callbacks = [keras.callbacks.LearningRateScheduler(scheduler),
                  keras.callbacks.TensorBoard(),
                  keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True),
                  # keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True),
