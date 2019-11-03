@@ -20,14 +20,14 @@ I have used tensorflow 2.0 and Keras API for this project. Also for deployment o
 
 The Dockerfile will load a gpu version of tensorflow 2.0 and installs the necessary python libraries into the image. To start training run the blow command:
 
-sh ./scripts/run.sh
+* sh ./scripts/run.sh
 
 To get the tensorboard run the below command:
 
-sh ./scripts/tensorboard.sh
+* sh ./scripts/tensorboard.sh
 
 To see the nvidia-smi results on the docker image run:
 
-sh ./scripts/nvidia.sh
+* sh ./scripts/nvidia.sh
 
 
