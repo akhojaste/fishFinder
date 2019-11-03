@@ -15,8 +15,8 @@ I have used tensorflow 2.0 and Keras API for this project. Also for deployment o
 
 ## Requirements
 
-### Python 3.6
-### docker 19.03
+* Python 3.6
+* docker 19.03
 
 The Dockerfile will load a gpu version of tensorflow 2.0 and installs the necessary python libraries into the image. To start training run the blow command:
 
