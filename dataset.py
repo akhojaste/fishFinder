@@ -10,6 +10,8 @@ from os import walk
 from augment import *
 from config import *
 import numpy as np
+from PIL import Image
+from autoaugment import *
 
 class InputData:
     
@@ -162,17 +164,38 @@ class InputData:
         image = aug(image, is_training)
         return image
 
+    def preproc_auto_augment(self, image_np):
+        """
+        Apply auto-augmentations on the images
+        :param image_np: the input single image in Numpy
+        :return: the transformed version of the image
+        """
+        # step 1: convert to PIL image
+        # to bring it to [0 - 255] uint8 which is the format pil requires
+        image_np = image_np * 255 / np.max(image_np).astype(np.uint8)
+        image_pil = Image.fromarray(image_np, 'RGB')
+
+        # step 2: apply augment
+        policy = ImageNetPolicy()
+        image_pil = policy(image_pil)
+
+        # step 3: convert PIL image back to Numpy ndarray
+        image_np = np.array(image_pil)
+
+        return image_np.astype(np.float32)
 
     def get_keras_ds(self):
         train_datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-            rotation_range=40,
-            width_shift_range=0.2,
-            height_shift_range=0.2,
-            rescale=1 / 255,
-            shear_range=0.2,
-            zoom_range=0.2,
-            horizontal_flip=True,
-            fill_mode='nearest',
+            # rotation_range=40,
+            # width_shift_range=0.2,
+            # height_shift_range=0.2,
+            # rescale=1 / 255,
+            # shear_range=0.2,
+            # zoom_range=0.2,
+            # horizontal_flip=True,
+            # fill_mode='nearest',
+            preprocessing_function=self.preproc_auto_augment,
+            rescale=1.0 / 255.0,
             validation_split=0.1
         )
         # train

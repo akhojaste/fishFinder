@@ -16,7 +16,7 @@ import imageio
 from config import *
 import fishFinder
 
-CHECKPOINT_PATH = './checkpoints/ckp_15'
+CHECKPOINT_PATH = './checkpoints/ckp_100    '
 
 def load_model(input_shape):
     """
