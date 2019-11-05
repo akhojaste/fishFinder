@@ -30,4 +30,8 @@ To see the nvidia-smi results on the docker image run:
 
 * sh ./scripts/nvidia.sh
 
+## Notes
+For the augmentations, I have used the augmentations that are learnt in the [auto-augment paper by Google](https://arxiv.org/abs/1805.09501v1). I have used [this](https://github.com/DeepVoltaire/AutoAugment) repo for the auto-augment policies.
+
+
 
