@@ -30,6 +30,9 @@ To see the nvidia-smi results on the docker image run:
 
 * sh ./scripts/nvidia.sh
 
+# Android app
+I have followed the tutorial in Tensorflow Lite examples to build a simple app. You can find the repo [here](https://github.com/tensorflow/examples/tree/master/lite/examples/image_classification/android).
+
 ## Notes
 For the augmentations, I have used the augmentations that are learnt in the [auto-augment paper by Google](https://arxiv.org/abs/1805.09501v1). I have used [this](https://github.com/DeepVoltaire/AutoAugment) repo for the auto-augment policies.
 
